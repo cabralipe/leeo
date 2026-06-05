@@ -1,0 +1,909 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LEEO - Sistema de Gestão de Laboratório</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Supabase JS Client CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- AUTHENTICATION SCREEN overlay -->
+    <div class="auth-container" id="auth-screen">
+        <div class="auth-card scale-in">
+            <div class="auth-header">
+                <div class="auth-logo">
+                    <i data-lucide="flask-conical"></i>
+                </div>
+                <h2 class="auth-title">LEEO</h2>
+                <p class="auth-subtitle" id="auth-subtitle-text">Gestão e Organização de Laboratório</p>
+            </div>
+
+            <!-- Login Form -->
+            <form id="login-form" class="vertical-form" style="padding: 0;">
+                <div class="form-group">
+                    <label for="login-username">Nome de Usuário *</label>
+                    <input type="text" id="login-username" placeholder="Ex: admin ou lucas" required autocomplete="username">
+                </div>
+                <div class="form-group">
+                    <label for="login-password">Senha *</label>
+                    <input type="password" id="login-password" placeholder="Digite sua senha" required autocomplete="current-password">
+                </div>
+                <button type="submit" class="btn btn-primary btn-block" style="margin-top: 0.5rem;">Entrar no Sistema</button>
+                <p class="auth-toggle-link">Não possui acesso? <a id="toggle-to-register">Criar uma conta</a></p>
+            </form>
+
+            <!-- Register Form (Hidden by default) -->
+            <form id="register-form" class="vertical-form" style="padding: 0; display: none;">
+                <div class="form-group">
+                    <label for="reg-fullname">Nome Completo *</label>
+                    <input type="text" id="reg-fullname" placeholder="Ex: Dr. Felipe Cabral" required autocomplete="name">
+                </div>
+                <div class="form-group">
+                    <label for="reg-username">Nome de Usuário (Login) *</label>
+                    <input type="text" id="reg-username" placeholder="Ex: felipe.cabral" required autocomplete="username">
+                </div>
+                <div class="form-group">
+                    <label for="reg-password">Senha *</label>
+                    <input type="password" id="reg-password" placeholder="Defina uma senha" required autocomplete="new-password">
+                </div>
+                <div class="form-group">
+                    <label for="reg-role">Nível de Acesso Recomendado *</label>
+                    <select id="reg-role" required>
+                        <option value="user" selected>Usuário Comum (Visualizar e Registrar Água)</option>
+                        <option value="admin">Administrador (CRUD de Reagentes, Alterar Equipamento)</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block" style="margin-top: 0.5rem;">Cadastrar e Entrar</button>
+                <p class="auth-toggle-link">Já possui uma conta? <a id="toggle-to-login">Ir para o Login</a></p>
+            </form>
+        </div>
+    </div>
+
+    <!-- MAIN DASHBOARD CONTENT wrapper -->
+    <div class="app-container" id="main-app" style="display: none;">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo-area">
+                    <div class="logo-icon">
+                        <i data-lucide="flask-conical"></i>
+                    </div>
+                    <span class="logo-text">LEEO</span>
+                </div>
+                <div class="logo-subtitle">Lab Management</div>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <ul>
+                    <li>
+                        <button class="nav-btn active" data-tab="inventario">
+                            <i data-lucide="package"></i>
+                            <span>Inventário</span>
+                        </button>
+                    </li>
+                    <li>
+                        <button class="nav-btn" data-tab="organizacao">
+                            <i data-lucide="clipboard-list"></i>
+                            <span>Checklist Semanal</span>
+                        </button>
+                    </li>
+                    <li>
+                        <button class="nav-btn" data-tab="mutirao">
+                            <i data-lucide="calendar-days"></i>
+                            <span>Mutirão Geral</span>
+                        </button>
+                    </li>
+                    <li>
+                        <button class="nav-btn" data-tab="agendamento">
+                            <i data-lucide="calendar-range"></i>
+                            <span>Agendamento</span>
+                        </button>
+                    </li>
+                    <li>
+                        <button class="nav-btn" data-tab="equipamentos">
+                            <i data-lucide="cpu"></i>
+                            <span>Equipamentos</span>
+                        </button>
+                    </li>
+                    <li>
+                        <button class="nav-btn" data-tab="agua">
+                            <i data-lucide="droplet"></i>
+                            <span>Registros de Água</span>
+                        </button>
+                    </li>
+                    <li id="nav-users-li" style="display: none;">
+                        <button class="nav-btn" data-tab="usuarios">
+                            <i data-lucide="users"></i>
+                            <span>Usuários</span>
+                        </button>
+                    </li>
+                </ul>
+            </nav>
+            
+            <div class="sidebar-footer">
+                <div class="user-profile">
+                    <div class="user-avatar">
+                        <i data-lucide="user"></i>
+                    </div>
+                    <div class="user-info">
+                        <div class="user-name" id="sidebar-user-name">Carregando...</div>
+                        <div class="user-role" id="sidebar-user-role">Nível</div>
+                    </div>
+                    <button class="btn-logout" id="btn-logout" title="Sair do Sistema">
+                        <i data-lucide="log-out"></i>
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Topbar -->
+            <header class="topbar">
+                <div class="topbar-title-area">
+                    <button class="mobile-toggle" id="mobileSidebarToggle">
+                        <i data-lucide="menu"></i>
+                    </button>
+                    <h1 id="page-title">Inventário de Reagentes</h1>
+                </div>
+                
+                <div class="topbar-actions">
+                    <div class="quick-stats">
+                        <div class="quick-stat-item alert" id="stat-expired-count">
+                            <i data-lucide="alert-triangle"></i>
+                            <span>0 Vencidos</span>
+                        </div>
+                        <div class="quick-stat-item warning" id="stat-unlabeled-count">
+                            <i data-lucide="help-circle"></i>
+                            <span>0 Sem Rótulo</span>
+                        </div>
+                    </div>
+                    <div class="current-date" id="current-date">Sexta, 5 de Junho de 2026</div>
+                </div>
+            </header>
+
+            <!-- Content Views Container -->
+            <div class="content-container">
+                
+                <!-- View 1: Inventário -->
+                <section id="view-inventario" class="tab-view active">
+                    <div class="view-header">
+                        <div class="search-filter-bar">
+                            <div class="search-input-wrapper">
+                                <i data-lucide="search"></i>
+                                <input type="text" id="reagent-search" placeholder="Buscar por nome, código ou CAS...">
+                            </div>
+                            <div class="filter-dropdown-wrapper">
+                                <i data-lucide="filter"></i>
+                                <select id="reagent-filter-location">
+                                    <option value="todos">Todas as Localizações</option>
+                                    <option value="Geladeira 1">Geladeira 1</option>
+                                    <option value="Freezer 2">Freezer 2</option>
+                                    <option value="Armário A">Armário A</option>
+                                    <option value="Armário B">Armário B</option>
+                                    <option value="Prateleira C">Prateleira C</option>
+                                </select>
+                            </div>
+                            <div class="filter-dropdown-wrapper">
+                                <i data-lucide="alert-circle"></i>
+                                <select id="reagent-filter-status">
+                                    <option value="todos">Todos os Status</option>
+                                    <option value="regular">Normais</option>
+                                    <option value="expired">Vencidos</option>
+                                    <option value="unlabeled">Sem Rótulo</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="action-buttons" id="inventory-admin-actions" style="display: none;">
+                            <button class="btn btn-danger btn-icon" id="btn-discard-expired">
+                                <i data-lucide="trash-2"></i>
+                                <span>Descartar Vencidos</span>
+                            </button>
+                            <button class="btn btn-primary btn-icon" id="btn-add-reagent-modal">
+                                <i data-lucide="plus"></i>
+                                <span>Novo Reagente</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Inventory Table Card -->
+                    <div class="card table-card">
+                        <div class="table-responsive">
+                            <table class="data-table" id="reagents-table">
+                                <thead>
+                                    <tr>
+                                        <th>Código</th>
+                                        <th>Reagente</th>
+                                        <th>CAS</th>
+                                        <th>Qtd. Total</th>
+                                        <th>Localização</th>
+                                        <th>Validade</th>
+                                        <th>Alertas / Estado</th>
+                                        <th class="actions-col edit-actions-header">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="reagents-tbody">
+                                    <!-- Seed data will be rendered here dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="table-footer">
+                            <span id="reagents-counter">Exibindo 0 reagente(s)</span>
+                        </div>
+                    </div>
+
+                    <!-- Activity Log Section inside Inventory -->
+                    <div class="card log-card mt-4">
+                        <div class="card-header">
+                            <div class="card-title-area">
+                                <i data-lucide="history"></i>
+                                <h3>Histórico de Descartes e Alterações</h3>
+                            </div>
+                            <button class="btn-clear-logs" id="btn-clear-inventory-logs" style="display: none;">Limpar Histórico</button>
+                        </div>
+                        <div class="log-container">
+                            <ul class="activity-log-list" id="inventory-log-list">
+                                <!-- Logs will appear here dynamically -->
+                            </ul>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- View 2: Organização Semanal (Checklist) -->
+                <section id="view-organizacao" class="tab-view">
+                    <!-- Top Business Rule Banner -->
+                    <div class="alert-banner warning-banner">
+                        <div class="banner-icon">
+                            <i data-lucide="info"></i>
+                        </div>
+                        <div class="banner-content">
+                            <h4 class="banner-title">Aviso de Responsabilidade</h4>
+                            <p>Ser o responsável pela organização não significa ser responsável por lavar materiais ou executar tarefas de terceiros. Deve notificar o utilizador responsável pelas tarefas pendentes.</p>
+                        </div>
+                    </div>
+
+                    <!-- Weekly Responsible Header -->
+                    <div class="responsible-section card">
+                        <div class="responsible-info">
+                            <div class="responsible-select-container">
+                                <span class="label">Responsável Técnico da Semana</span>
+                                <div class="responsible-select-wrapper">
+                                    <i data-lucide="user-check"></i>
+                                    <select id="select-weekly-responsible" class="responsible-dropdown">
+                                        <!-- Populated dynamically via app.js -->
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="progress-container-wrapper">
+                                <span class="label">Progresso do Checklist Semanal</span>
+                                <div class="progress-bar-row">
+                                    <div class="progress-track">
+                                        <div class="progress-fill" id="checklist-progress-fill" style="width: 0%;"></div>
+                                    </div>
+                                    <span class="progress-percent" id="checklist-progress-text">0%</span>
+                                </div>
+                            </div>
+                        </div>
+                        <button class="btn btn-outline btn-icon" id="btn-reset-checklist" style="display: none;">
+                            <i data-lucide="rotate-ccw"></i>
+                            <span>Reiniciar Checklist</span>
+                        </button>
+                    </div>
+
+                    <!-- Checklist Categories Grid -->
+                    <div class="checklist-grid">
+                        
+                        <!-- Category 1: Bancadas e Capelas -->
+                        <div class="card checklist-card">
+                            <div class="checklist-card-header">
+                                <div class="category-icon color-bancadas">
+                                    <i data-lucide="table"></i>
+                                </div>
+                                <h3>Bancadas e Capelas</h3>
+                            </div>
+                            <div class="checklist-items">
+                                <label class="checklist-item">
+                                    <input type="checkbox" data-id="bancada_1" class="task-checkbox">
+                                    <span class="custom-checkbox"></span>
+                                    <span class="task-text">Verificar vidrarias sujas ou abandonadas nas bancadas.</span>
+                                </label>
+                                <label class="checklist-item">
+                                    <input type="checkbox" data-id="bancada_2" class="task-checkbox">
+                                    <span class="custom-checkbox"></span>
+                                    <span class="task-text">Notificar responsáveis no grupo de limpeza em caso de irregularidades.</span>
+                                </label>
+                                <label class="checklist-item">
+                                    <input type="checkbox" data-id="bancada_3" class="task-checkbox">
+                                    <span class="custom-checkbox"></span>
+                                    <span class="task-text">Garantir que as capelas estejam com a janela de proteção na altura correta e sem materiais obstruindo o fluxo.</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Category 2: Ponteiras -->
+                        <div class="card checklist-card">
+                            <div class="checklist-card-header">
+                                <div class="category-icon color-ponteiras">
+                                    <i data-lucide="pipette"></i>
+                                </div>
+                                <h3>Ponteiras</h3>
+                            </div>
+                            <div class="checklist-items">
+                                <label class="checklist-item">
+                                    <input type="checkbox" data-id="ponteira_1" class="task-checkbox">
+                                    <span class="custom-checkbox"></span>
+                                    <span class="task-text">Garantir que **APENAS** as ponteiras de 5 mL são lavadas para reutilização.</span>
+                                </label>
+                                <label class="checklist-item">
+                                    <input type="checkbox" data-id="ponteira_2" class="task-checkbox">
+                                    <span class="custom-checkbox"></span>
+                                    <span class="task-text">Descartar ponteiras de outros volumes (ex: 200µL, 1000µL) diretamente nos resíduos apropriados após o uso.</span>
+                                </label>
+                                <label class="checklist-item">
+                                    <input type="checkbox" data-id="ponteira_3" class="task-checkbox">
+                                    <span class="custom-checkbox"></span>
+                                    <span class="task-text">Verificar se as caixas de ponteiras estão abastecidas e esterilizadas em autoclave.</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Category 3: Resíduos -->
+                        <div class="card checklist-card">
+                            <div class="checklist-card-header">
+                                <div class="category-icon color-residuos">
+                                    <i data-lucide="trash"></i>
+                                </div>
+                                <h3>Resíduos</h3>
+                            </div>
+                            <div class="checklist-items">
+                                <label class="checklist-item">
+                                    <input type="checkbox" data-id="residuo_1" class="task-checkbox">
+                                    <span class="custom-checkbox"></span>
+                                    <span class="task-text">Conferir se recipientes de descarte de resíduos químicos e biológicos estão cheios.</span>
+                                </label>
+                                <label class="checklist-item">
+                                    <input type="checkbox" data-id="residuo_2" class="task-checkbox">
+                                    <span class="custom-checkbox"></span>
+                                    <span class="task-text">Verificar identificação obrigatória: Tipo de resíduo, Responsável, Data Início e Data Encerramento.</span>
+                                </label>
+                                <label class="checklist-item">
+                                    <input type="checkbox" data-id="residuo_3" class="task-checkbox">
+                                    <span class="custom-checkbox"></span>
+                                    <span class="task-text">Solicitar recolhimento se o nível do galão atingir 80% da capacidade.</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Category 4: Equipamentos & Ar-condicionados -->
+                        <div class="card checklist-card">
+                            <div class="checklist-card-header">
+                                <div class="category-icon color-equipamentos">
+                                    <i data-lucide="power"></i>
+                                </div>
+                                <h3>Equipamentos & Ar-condicionados</h3>
+                            </div>
+                            <div class="checklist-items">
+                                <label class="checklist-item">
+                                    <input type="checkbox" data-id="equip_1" class="task-checkbox">
+                                    <span class="custom-checkbox"></span>
+                                    <span class="task-text">Verificar se os ar-condicionados estão limpos e se a temperatura está correta.</span>
+                                </label>
+                                <label class="checklist-item">
+                                    <input type="checkbox" data-id="equip_2" class="task-checkbox">
+                                    <span class="custom-checkbox"></span>
+                                    <span class="task-text">Garantir que todos os aparelhos não-críticos estejam desligados ao sair.</span>
+                                </label>
+                                <label class="checklist-item">
+                                    <input type="checkbox" data-id="equip_3" class="task-checkbox">
+                                    <span class="custom-checkbox"></span>
+                                    <span class="task-text">Realizar a alternância do ar-condicionado na sala do HPLC e do Biofreezer para evitar sobrecarga.</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Category 5: EPI & Insumos -->
+                        <div class="card checklist-card">
+                            <div class="checklist-card-header">
+                                <div class="category-icon color-epi">
+                                    <i data-lucide="shield"></i>
+                                </div>
+                                <h3>EPI & Insumos</h3>
+                            </div>
+                            <div class="checklist-items">
+                                <label class="checklist-item">
+                                    <input type="checkbox" data-id="epi_1" class="task-checkbox">
+                                    <span class="custom-checkbox"></span>
+                                    <span class="task-text">Sinalizar stock baixo de consumíveis essenciais (máscaras, luvas, papel toalha).</span>
+                                </label>
+                                <label class="checklist-item">
+                                    <input type="checkbox" data-id="epi_2" class="task-checkbox">
+                                    <span class="custom-checkbox"></span>
+                                    <span class="task-text">Verificar se há reagentes fora de suas localizações corretas (ex: ácidos fora do armário corta-fogo).</span>
+                                </label>
+                                <label class="checklist-item">
+                                    <input type="checkbox" data-id="epi_3" class="task-checkbox">
+                                    <span class="custom-checkbox"></span>
+                                    <span class="task-text">Confirmar a presença e a validade dos kits de derramamento de reagentes químicos.</span>
+                                </label>
+                            </div>
+                        </div>
+
+                    </div>
+                </section>
+
+                <!-- View 6: Mutirão de Organização Geral -->
+                <section id="view-mutirao" class="tab-view">
+                    <div class="alert-banner warning-banner">
+                        <div class="banner-icon">
+                            <i data-lucide="calendar"></i>
+                        </div>
+                        <div class="banner-content">
+                            <h4 class="banner-title">Mutirão de Organização Geral</h4>
+                            <p>Monitore o cronograma diário, atribua responsáveis e acompanhe a execução das atividades do mutirão científico.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="mutirao-grid" id="mutirao-grid-container">
+                        <!-- Rendered dynamically via app.js -->
+                    </div>
+                </section>
+
+                <!-- View 7: Agendamento de Laboratórios -->
+                <section id="view-agendamento" class="tab-view">
+                    <!-- Business Rule Info Banner -->
+                    <div class="alert-banner warning-banner" style="border-left: 4px solid var(--warning);">
+                        <div class="banner-icon">
+                            <i data-lucide="clock"></i>
+                        </div>
+                        <div class="banner-content">
+                            <h4 class="banner-title">Regra de Reserva Antecipada</h4>
+                            <p>As reservas de laboratórios devem ser solicitadas com no **mínimo 48 horas de antecedência** do horário de início desejado.</p>
+                        </div>
+                    </div>
+
+                    <div class="water-content-split">
+                        <!-- Left Side: Reservation Form -->
+                        <div class="card water-form-card">
+                            <div class="card-header">
+                                <h3><i data-lucide="plus-circle"></i> Solicitar Reserva</h3>
+                            </div>
+                            <form id="reservation-form" class="vertical-form">
+                                <div class="form-group">
+                                    <label for="reservation-lab">Laboratório de Uso *</label>
+                                    <select id="reservation-lab" required>
+                                        <option value="Laboratório de HPLC">Laboratório de HPLC</option>
+                                        <option value="Laboratório de Química Geral">Laboratório de Química Geral</option>
+                                        <option value="Laboratório de Eletroquímica">Laboratório de Eletroquímica</option>
+                                        <option value="Laboratório de Biologia Celular">Laboratório de Biologia Celular</option>
+                                        <option value="Sala de Deionização e Destilação">Sala de Deionização e Destilação</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-row split">
+                                    <div class="form-group">
+                                        <label for="reservation-start">Início da Reserva *</label>
+                                        <input type="datetime-local" id="reservation-start" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="reservation-end">Término da Reserva *</label>
+                                        <input type="datetime-local" id="reservation-end" required>
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="reservation-notes">Finalidade / Projeto *</label>
+                                    <input type="text" id="reservation-notes" placeholder="Ex: Corrida cromatográfica, síntese, etc." required>
+                                </div>
+
+                                <button type="submit" class="btn btn-primary btn-block">Agendar Horário</button>
+                            </form>
+                        </div>
+
+                        <!-- Right Side: Active Reservations List -->
+                        <div class="card water-history-card">
+                            <div class="card-header">
+                                <h3><i data-lucide="calendar"></i> Reservas Cadastradas</h3>
+                                <button class="btn-clear-logs" id="btn-clear-reservations" style="display: none;">Limpar Tudo</button>
+                            </div>
+                            <div class="table-responsive select-y">
+                                <table class="data-table small-table" id="reservations-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Laboratório</th>
+                                            <th>Usuário</th>
+                                            <th>Início</th>
+                                            <th>Fim</th>
+                                            <th>Finalidade</th>
+                                            <th class="actions-col">Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="reservations-tbody">
+                                        <!-- Reservations written dynamically -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- View 3: Gestão de Equipamentos e Treinamento -->
+                <section id="view-equipamentos" class="tab-view">
+                    <div class="equipment-filter-bar">
+                        <div class="filter-group">
+                            <button class="filter-chip active" data-equip-filter="todos">Todos</button>
+                            <button class="filter-chip" data-equip-filter="Operacional">Operacionais</button>
+                            <button class="filter-chip" data-equip-filter="Em Manutenção">Em Manutenção</button>
+                        </div>
+                        <div class="filter-info" id="equip-info-text">
+                            Ao mudar o estado para "Em Manutenção", um alerta é exibido no cartão.
+                        </div>
+                        <button class="btn btn-primary btn-icon" id="btn-add-equipment-modal" style="display: none;">
+                            <i data-lucide="plus"></i>
+                            <span>Novo Equipamento</span>
+                        </button>
+                    </div>
+
+                    <!-- Equipment Grid -->
+                    <div class="equipment-grid" id="equipment-grid-container">
+                        <!-- Rendered dynamically via app.js -->
+                    </div>
+                </section>
+
+                <!-- View 4: Registros de Água -->
+                <section id="view-agua" class="tab-view">
+                    <!-- Stats Grid for Water -->
+                    <div class="water-stats-grid">
+                        <div class="card water-stat-card deionizada">
+                            <div class="water-stat-icon">
+                                <i data-lucide="droplet"></i>
+                            </div>
+                            <div class="water-stat-data">
+                                <span class="water-stat-label">Estoque Estimado de Água Deionizada</span>
+                                <h2 class="water-stat-val" id="stock-deionizada">0 L</h2>
+                            </div>
+                        </div>
+                        
+                        <div class="card water-stat-card destilada">
+                            <div class="water-stat-icon">
+                                <i data-lucide="droplets"></i>
+                            </div>
+                            <div class="water-stat-data">
+                                <span class="water-stat-label">Estoque Estimado de Água Destilada</span>
+                                <h2 class="water-stat-val" id="stock-destilada">0 L</h2>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="water-content-split">
+                        <!-- Left Side: Registration Form -->
+                        <div class="card water-form-card">
+                            <div class="card-header">
+                                <h3><i data-lucide="plus-circle"></i> Novo Registro de Volume</h3>
+                            </div>
+                            <form id="water-log-form" class="vertical-form">
+                                <div class="form-row split">
+                                    <div class="form-group">
+                                        <label for="water-type">Tipo de Água *</label>
+                                        <select id="water-type" required>
+                                            <option value="Deionizada">Deionizada</option>
+                                            <option value="Destilada">Destilada</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="water-action">Operação *</label>
+                                        <select id="water-action" required>
+                                            <option value="Produzido">Produzido (+)</option>
+                                            <option value="Consumido">Consumido (-)</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="form-row split">
+                                    <div class="form-group">
+                                        <label for="water-amount">Quantidade (Litros) *</label>
+                                        <input type="number" id="water-amount" min="0.1" step="0.1" placeholder="Ex: 5" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="water-user">Operador / Usuário *</label>
+                                        <input type="text" id="water-user" placeholder="Nome do Responsável" required>
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="water-date">Data e Hora *</label>
+                                    <input type="datetime-local" id="water-date" required>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="water-notes">Notas / Finalidade (Opcional)</label>
+                                    <input type="text" id="water-notes" placeholder="Ex: Utilizado para HPLC, Limpeza da capela, etc.">
+                                </div>
+
+                                <button type="submit" class="btn btn-primary btn-block">Salvar Registro</button>
+                            </form>
+                        </div>
+
+                        <!-- Right Side: Recent History -->
+                        <div class="card water-history-card">
+                            <div class="card-header">
+                                <h3><i data-lucide="list"></i> Histórico de Registros</h3>
+                                <button class="btn-clear-logs" id="btn-clear-water-logs" style="display: none;">Limpar Registros</button>
+                            </div>
+                            <div class="table-responsive select-y">
+                                <table class="data-table small-table" id="water-history-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Data</th>
+                                            <th>Usuário</th>
+                                            <th>Tipo</th>
+                                            <th>Operação</th>
+                                            <th>Qtd.</th>
+                                            <th>Finalidade</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="water-history-tbody">
+                                        <!-- Logs will be written dynamically -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- View 5: Usuários (Admin / Superadmin only) -->
+                <section id="view-usuarios" class="tab-view">
+                    <div class="view-header">
+                        <div class="search-filter-bar">
+                            <h3 style="font-family: var(--font-heading); font-size: 1.25rem;">Gerenciamento de Acesso</h3>
+                        </div>
+                        <button class="btn btn-primary btn-icon" id="btn-add-user-modal">
+                            <i data-lucide="user-plus"></i>
+                            <span>Cadastrar Usuário</span>
+                        </button>
+                    </div>
+
+                    <!-- Users Table Card -->
+                    <div class="card table-card">
+                        <div class="table-responsive">
+                            <table class="data-table" id="users-table">
+                                <thead>
+                                    <tr>
+                                        <th>Nome Completo</th>
+                                        <th>Usuário</th>
+                                        <th>Nível de Acesso</th>
+                                        <th class="actions-col">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="users-tbody">
+                                    <!-- Users list rendered dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+                
+            </div>
+        </main>
+    </div>
+
+    <!-- MODAL 1: ADD/EDIT REAGENT -->
+    <div class="modal-backdrop" id="reagent-modal">
+        <div class="modal-content scale-in">
+            <div class="modal-header">
+                <h3 id="reagent-modal-title">Novo Reagente</h3>
+                <button class="modal-close" id="btn-close-reagent-modal">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+            <form id="reagent-form" class="vertical-form">
+                <input type="hidden" id="reagent-id">
+                
+                <div class="form-row split">
+                    <div class="form-group">
+                        <label for="reagent-code">Código *</label>
+                        <input type="text" id="reagent-code" placeholder="Ex: R001" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="reagent-name">Nome do Reagente *</label>
+                        <input type="text" id="reagent-name" placeholder="Ex: Metanol" required>
+                    </div>
+                </div>
+
+                <div class="form-row split">
+                    <div class="form-group">
+                        <label for="reagent-cas">CAS *</label>
+                        <input type="text" id="reagent-cas" placeholder="Ex: 67-56-1" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="reagent-quantity">Quantidade Total *</label>
+                        <input type="text" id="reagent-quantity" placeholder="Ex: 5 Litros, 500 mL, 1 kg" required>
+                    </div>
+                </div>
+
+                <div class="form-row split">
+                    <div class="form-group">
+                        <label for="reagent-location">Localização *</label>
+                        <select id="reagent-location" required>
+                            <option value="Geladeira 1">Geladeira 1</option>
+                            <option value="Freezer 2">Freezer 2</option>
+                            <option value="Armário A">Armário A</option>
+                            <option value="Armário B">Armário B</option>
+                            <option value="Prateleira C">Prateleira C</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="reagent-expiry">Data de Validade *</label>
+                        <input type="date" id="reagent-expiry" required>
+                    </div>
+                </div>
+
+                <div class="form-group checkbox-group-field">
+                    <label class="checklist-item">
+                        <input type="checkbox" id="reagent-unlabeled">
+                        <span class="custom-checkbox"></span>
+                        <span class="task-text font-bold">Sem Rótulo / Rótulo Danificado (Alerta Visual)</span>
+                    </label>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline" id="btn-cancel-reagent-modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary" id="btn-save-reagent">Salvar Reagente</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 2: EQUIPMENT TRAINING & PROCEDURES -->
+    <div class="modal-backdrop" id="training-modal">
+        <div class="modal-content scale-in medium-modal">
+            <div class="modal-header">
+                <h3 id="training-modal-title">Centrífuga - Treinamento e Procedimentos</h3>
+                <button class="modal-close" id="btn-close-training-modal">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+            <div class="modal-body" id="training-modal-body">
+                <!-- Dynamically populated per equipment -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline btn-block" id="btn-close-training-modal-foot">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 3: ADD/EDIT USER -->
+    <div class="modal-backdrop" id="user-modal">
+        <div class="modal-content scale-in">
+            <div class="modal-header">
+                <h3 id="user-modal-title">Cadastrar Novo Usuário</h3>
+                <button class="modal-close" id="btn-close-user-modal">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+            <form id="user-form" class="vertical-form">
+                <input type="hidden" id="user-id">
+                
+                <div class="form-group">
+                    <label for="user-fullname">Nome Completo *</label>
+                    <input type="text" id="user-fullname" placeholder="Ex: Prof. Carlos Souza" required autocomplete="name">
+                </div>
+
+                <div class="form-row split">
+                    <div class="form-group">
+                        <label for="user-username">Usuário (Login) *</label>
+                        <input type="text" id="user-username" placeholder="Ex: carlos.souza" required autocomplete="username">
+                    </div>
+                    <div class="form-group">
+                        <label for="user-password">Senha *</label>
+                        <input type="password" id="user-password" placeholder="Senha de acesso" required autocomplete="new-password">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="user-role">Nível de Acesso *</label>
+                    <select id="user-role" required>
+                        <option value="user">Usuário Comum (Visualizar e Registrar Água)</option>
+                        <option value="admin">Administrador (CRUD de Reagentes, Alterar Equipamento)</option>
+                        <option value="superadmin">Superadmin (Controle Total)</option>
+                    </select>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline" id="btn-cancel-user-modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary" id="btn-save-user">Salvar Usuário</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 4: ADD/EDIT EQUIPMENT -->
+    <div class="modal-backdrop" id="equipment-modal">
+        <div class="modal-content scale-in medium-modal">
+            <div class="modal-header">
+                <h3 id="equipment-modal-title">Novo Equipamento</h3>
+                <button class="modal-close" id="btn-close-equipment-modal">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+            <form id="equipment-form" class="vertical-form">
+                <input type="hidden" id="equipment-id">
+                
+                <div class="form-row split">
+                    <div class="form-group">
+                        <label for="equipment-name">Nome do Equipamento *</label>
+                        <input type="text" id="equipment-name" placeholder="Ex: Centrífuga de Bancada" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="equipment-icon">Ícone do Equipamento *</label>
+                        <select id="equipment-icon" required>
+                            <option value="cpu" selected>Padrão (CPU)</option>
+                            <option value="zap">Potência / Eletricidade (Zap)</option>
+                            <option value="activity">Gráfico / HPLC (Activity)</option>
+                            <option value="thermometer-snowflake">pH / Temperatura (Thermometer)</option>
+                            <option value="droplet">Gota de Água (Droplet)</option>
+                            <option value="droplets">Gotas de Água (Droplets)</option>
+                            <option value="snowflake">Frio / Freezer (Snowflake)</option>
+                            <option value="disc">Rotação / Centrífuga (Disc)</option>
+                            <option value="wind">Fluxo / Rotaevaporador (Wind)</option>
+                            <option value="flame">Fogo / Aquecimento (Flame)</option>
+                            <option value="container">Recipiente / Soxhlet (Container)</option>
+                            <option value="waves">Ondas / Ultrassom (Waves)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row split">
+                    <div class="form-group">
+                        <label for="equipment-responsible">Responsável Técnico *</label>
+                        <select id="equipment-responsible" required>
+                            <!-- Populated dynamically -->
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="equipment-status">Estado Operacional *</label>
+                        <select id="equipment-status" required>
+                            <option value="Operacional" selected>Operacional</option>
+                            <option value="Em Manutenção">Em Manutenção</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row split">
+                    <div class="form-group">
+                        <label for="equipment-video">Link do Vídeo de Treinamento</label>
+                        <input type="url" id="equipment-video" placeholder="Ex: https://www.youtube.com/... ">
+                    </div>
+                    <div class="form-group">
+                        <label for="equipment-video-title">Título do Vídeo de Treinamento</label>
+                        <input type="text" id="equipment-video-title" placeholder="Ex: Treino de Centrífuga de Bancada">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="equipment-steps">Instruções e Procedimentos de Treino (um por linha) *</label>
+                    <textarea id="equipment-steps" rows="6" placeholder="Insira os passos obrigatórios de treino, um por linha.&#10;Exemplo:&#10;1. Pese todos os tubos em balança de precisão.&#10;2. Certifique-se de que estão tampados..." required style="width:100%; min-height:120px; padding:0.6rem 0.85rem; background-color:var(--bg-primary); border:1px solid var(--border-color); border-radius:var(--radius-md); color:#fff; font-family:inherit; box-sizing:border-box; outline:none; transition:var(--transition-fast);"></textarea>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline" id="btn-cancel-equipment-modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary" id="btn-save-equipment">Salvar Equipamento</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- NOTIFICATION SYSTEM -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <script src="app.js"></script>
+</body>
+</html>
