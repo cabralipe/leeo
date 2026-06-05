@@ -399,7 +399,7 @@ registerForm.addEventListener("submit", (e) => {
     const name = document.getElementById("reg-fullname").value.trim();
     const username = document.getElementById("reg-username").value.trim().toLowerCase();
     const password = document.getElementById("reg-password").value;
-    const role = document.getElementById("reg-role").value;
+    const role = "user";
     
     if (state.users.some(u => u.username === username)) {
         showToast("Este nome de usuário já está cadastrado.", "danger");
@@ -1063,6 +1063,10 @@ function renderMutiraoGrid() {
     if (!mutiraoGridContainer) return;
     mutiraoGridContainer.innerHTML = "";
     
+    const userRole = state.currentUser ? state.currentUser.role : "user";
+    const isAdmin = userRole === "admin" || userRole === "superadmin";
+    const disabledAttr = isAdmin ? "" : "disabled";
+    
     const membersList = state.users.map(u => u.name);
     
     state.mutirao.forEach((dayData, dayIdx) => {
@@ -1085,7 +1089,7 @@ function renderMutiraoGrid() {
             const isCh = task.checked ? "checked" : "";
             return `
                 <label class="checklist-item">
-                    <input type="checkbox" data-day-idx="${dayIdx}" data-task-id="${task.id}" ${isCh} class="mutirao-task-checkbox">
+                    <input type="checkbox" data-day-idx="${dayIdx}" data-task-id="${task.id}" ${isCh} ${disabledAttr} class="mutirao-task-checkbox">
                     <span class="custom-checkbox"></span>
                     <span class="task-text">${task.text}</span>
                 </label>
@@ -1101,14 +1105,14 @@ function renderMutiraoGrid() {
             <div class="mutirao-assign-row">
                 <div class="mutirao-input-group">
                     <label>Responsável</label>
-                    <select onchange="updateMutiraoResponsible(${dayIdx}, this.value)">
+                    <select ${disabledAttr} onchange="updateMutiraoResponsible(${dayIdx}, this.value)">
                         <option value="">Selecione...</option>
                         ${selectOptionsHTML}
                     </select>
                 </div>
                 <div class="mutirao-input-group">
                     <label>Equipe</label>
-                    <input type="text" placeholder="Integrantes..." value="${dayData.team || ''}" onchange="updateMutiraoTeam(${dayIdx}, this.value)">
+                    <input type="text" ${disabledAttr} placeholder="Integrantes..." value="${dayData.team || ''}" onchange="updateMutiraoTeam(${dayIdx}, this.value)">
                 </div>
             </div>
             
@@ -1128,6 +1132,12 @@ function renderMutiraoGrid() {
     
     document.querySelectorAll(".mutirao-task-checkbox").forEach(cb => {
         cb.addEventListener("change", () => {
+            if (!isAdmin) {
+                cb.checked = !cb.checked; // Revert checkbox change
+                showToast("Acesso negado: Apenas administradores podem atualizar o mutirão.", "danger");
+                return;
+            }
+            
             const dayIndex = parseInt(cb.getAttribute("data-day-idx"));
             const taskId = cb.getAttribute("data-task-id");
             
@@ -1158,6 +1168,12 @@ function renderMutiraoGrid() {
 }
 
 window.updateMutiraoResponsible = function(dayIndex, value) {
+    const userRole = state.currentUser ? state.currentUser.role : "user";
+    if (userRole !== "admin" && userRole !== "superadmin") {
+        showToast("Acesso negado: Apenas administradores podem gerenciar o mutirão.", "danger");
+        return;
+    }
+    
     const dayObj = state.mutirao[dayIndex];
     dayObj.responsible = value;
     saveState();
@@ -1176,6 +1192,12 @@ window.updateMutiraoResponsible = function(dayIndex, value) {
 };
 
 window.updateMutiraoTeam = function(dayIndex, value) {
+    const userRole = state.currentUser ? state.currentUser.role : "user";
+    if (userRole !== "admin" && userRole !== "superadmin") {
+        showToast("Acesso negado: Apenas administradores podem gerenciar o mutirão.", "danger");
+        return;
+    }
+    
     const dayObj = state.mutirao[dayIndex];
     dayObj.team = value;
     saveState();
@@ -1588,6 +1610,24 @@ window.openTrainingModal = function(id) {
     trainingModal.classList.add("show");
     lucide.createIcons();
 };
+
+// Training Modal Close Actions
+const btnCloseTrainingModal = document.getElementById("btn-close-training-modal");
+const btnCloseTrainingModalFoot = document.getElementById("btn-close-training-modal-foot");
+
+function closeTrainingModal() {
+    if (trainingModal) {
+        trainingModal.classList.remove("show");
+    }
+}
+
+if (btnCloseTrainingModal) btnCloseTrainingModal.addEventListener("click", closeTrainingModal);
+if (btnCloseTrainingModalFoot) btnCloseTrainingModalFoot.addEventListener("click", closeTrainingModal);
+if (trainingModal) {
+    trainingModal.addEventListener("click", (e) => {
+        if (e.target === trainingModal) closeTrainingModal();
+    });
+}
 
 // Equipment CRUD Modals & Save Actions (Superadmin only)
 const equipmentModal = document.getElementById("equipment-modal");
