@@ -4,6 +4,34 @@
  */
 
 // ==========================================================================
+// SAFE LOCAL STORAGE WRAPPER (Prevents crashes in restrictive file:// sandboxes)
+// ==========================================================================
+const safeLocalStorage = {
+    getItem(key) {
+        try {
+            return window.localStorage.getItem(key);
+        } catch (e) {
+            console.warn("localStorage.getItem is blocked or unavailable:", e);
+            return null;
+        }
+    },
+    setItem(key, value) {
+        try {
+            window.localStorage.setItem(key, value);
+        } catch (e) {
+            console.warn("localStorage.setItem is blocked or unavailable:", e);
+        }
+    },
+    removeItem(key) {
+        try {
+            window.localStorage.removeItem(key);
+        } catch (e) {
+            console.warn("localStorage.removeItem is blocked or unavailable:", e);
+        }
+    }
+};
+
+// ==========================================================================
 // SUPABASE DATABASE INTEGRATION (OPCIONAL)
 // ==========================================================================
 const SUPABASE_URL = "https://wlojxqzhsxprjdfuywbg.supabase.co";
@@ -144,16 +172,16 @@ const LAB_MEMBERS = [
 
 // Initialize State Object
 let state = {
-    users: JSON.parse(localStorage.getItem("leeo_users")) || DEFAULT_USERS,
-    currentUser: JSON.parse(localStorage.getItem("leeo_currentUser")) || null,
-    reagents: JSON.parse(localStorage.getItem("leeo_reagents")) || DEFAULT_REAGENTS,
-    checklist: JSON.parse(localStorage.getItem("leeo_checklist")) || DEFAULT_CHECKLIST,
-    mutirao: JSON.parse(localStorage.getItem("leeo_mutirao")) || DEFAULT_MUTIRAO,
-    reservations: JSON.parse(localStorage.getItem("leeo_reservations")) || DEFAULT_RESERVATIONS,
-    equipments: JSON.parse(localStorage.getItem("leeo_equipments")) || DEFAULT_EQUIPMENTS,
-    waterLogs: JSON.parse(localStorage.getItem("leeo_waterLogs")) || DEFAULT_WATER_LOGS,
-    inventoryLogs: JSON.parse(localStorage.getItem("leeo_inventoryLogs")) || DEFAULT_INVENTORY_LOGS,
-    weeklyResponsible: localStorage.getItem("leeo_weeklyResponsible") || null
+    users: JSON.parse(safeLocalStorage.getItem("leeo_users")) || DEFAULT_USERS,
+    currentUser: JSON.parse(safeLocalStorage.getItem("leeo_currentUser")) || null,
+    reagents: JSON.parse(safeLocalStorage.getItem("leeo_reagents")) || DEFAULT_REAGENTS,
+    checklist: JSON.parse(safeLocalStorage.getItem("leeo_checklist")) || DEFAULT_CHECKLIST,
+    mutirao: JSON.parse(safeLocalStorage.getItem("leeo_mutirao")) || DEFAULT_MUTIRAO,
+    reservations: JSON.parse(safeLocalStorage.getItem("leeo_reservations")) || DEFAULT_RESERVATIONS,
+    equipments: JSON.parse(safeLocalStorage.getItem("leeo_equipments")) || DEFAULT_EQUIPMENTS,
+    waterLogs: JSON.parse(safeLocalStorage.getItem("leeo_waterLogs")) || DEFAULT_WATER_LOGS,
+    inventoryLogs: JSON.parse(safeLocalStorage.getItem("leeo_inventoryLogs")) || DEFAULT_INVENTORY_LOGS,
+    weeklyResponsible: safeLocalStorage.getItem("leeo_weeklyResponsible") || null
 };
 
 if (!state.weeklyResponsible && state.users.length > 0) {
@@ -277,16 +305,16 @@ async function supabaseDelete(table, idValue) {
 }
 
 function saveStateLocal() {
-    localStorage.setItem("leeo_users", JSON.stringify(state.users));
-    localStorage.setItem("leeo_currentUser", JSON.stringify(state.currentUser));
-    localStorage.setItem("leeo_reagents", JSON.stringify(state.reagents));
-    localStorage.setItem("leeo_checklist", JSON.stringify(state.checklist));
-    localStorage.setItem("leeo_mutirao", JSON.stringify(state.mutirao));
-    localStorage.setItem("leeo_reservations", JSON.stringify(state.reservations));
-    localStorage.setItem("leeo_equipments", JSON.stringify(state.equipments));
-    localStorage.setItem("leeo_waterLogs", JSON.stringify(state.waterLogs));
-    localStorage.setItem("leeo_inventoryLogs", JSON.stringify(state.inventoryLogs));
-    localStorage.setItem("leeo_weeklyResponsible", state.weeklyResponsible);
+    safeLocalStorage.setItem("leeo_users", JSON.stringify(state.users));
+    safeLocalStorage.setItem("leeo_currentUser", JSON.stringify(state.currentUser));
+    safeLocalStorage.setItem("leeo_reagents", JSON.stringify(state.reagents));
+    safeLocalStorage.setItem("leeo_checklist", JSON.stringify(state.checklist));
+    safeLocalStorage.setItem("leeo_mutirao", JSON.stringify(state.mutirao));
+    safeLocalStorage.setItem("leeo_reservations", JSON.stringify(state.reservations));
+    safeLocalStorage.setItem("leeo_equipments", JSON.stringify(state.equipments));
+    safeLocalStorage.setItem("leeo_waterLogs", JSON.stringify(state.waterLogs));
+    safeLocalStorage.setItem("leeo_inventoryLogs", JSON.stringify(state.inventoryLogs));
+    safeLocalStorage.setItem("leeo_weeklyResponsible", state.weeklyResponsible);
     
     updateGlobalCounters();
 }
@@ -356,7 +384,7 @@ loginForm.addEventListener("submit", (e) => {
         state.currentUser = user;
         saveState();
         showToast(`Bem-vindo, ${user.name}!`, "success");
-        initDashboard();
+        checkAuth();
         
         if (supabaseClient) {
             syncFromSupabase();
@@ -396,15 +424,14 @@ registerForm.addEventListener("submit", (e) => {
     if (supabaseClient) {
         supabaseUpsert("leeo_users", newUser);
         syncFromSupabase();
-    } else {
-        initDashboard();
     }
+    checkAuth();
 });
 
 btnLogout.addEventListener("click", () => {
     if (confirm("Deseja sair do sistema?")) {
         state.currentUser = null;
-        localStorage.removeItem("leeo_currentUser");
+        safeLocalStorage.removeItem("leeo_currentUser");
         
         document.querySelectorAll(".nav-btn").forEach(b => b.classList.remove("active"));
         document.querySelector("[data-tab='inventario']").classList.add("active");
@@ -580,6 +607,28 @@ function addInventoryLog(text, type = "info") {
     if (supabaseClient) {
         supabaseUpsert("leeo_inventory_logs", newLog);
     }
+}
+
+function renderInventoryLogs() {
+    const logListEl = document.getElementById("inventory-log-list");
+    if (!logListEl) return;
+    logListEl.innerHTML = "";
+    
+    if (state.inventoryLogs.length === 0) {
+        logListEl.innerHTML = `<li style="text-align: center; color: var(--text-muted); padding: 1rem; font-size: 0.8rem;">Nenhuma atividade registrada.</li>`;
+        return;
+    }
+    
+    state.inventoryLogs.forEach(log => {
+        const li = document.createElement("li");
+        li.className = `activity-log-item log-${log.type || 'info'}`;
+        
+        li.innerHTML = `
+            <span>${log.text}</span>
+            <span class="activity-log-time">${log.time}</span>
+        `;
+        logListEl.appendChild(li);
+    });
 }
 
 function updateGlobalCounters() {
@@ -909,6 +958,7 @@ function renderReagentsTable() {
 // ==========================================================================
 
 function setupResponsibleSelector() {
+    const weeklyResponsibleSelect = document.getElementById("select-weekly-responsible");
     if (!weeklyResponsibleSelect) return;
     
     weeklyResponsibleSelect.innerHTML = "";
@@ -977,6 +1027,8 @@ function updateChecklistProgress() {
     });
     
     const percent = total > 0 ? Math.round((checked / total) * 100) : 0;
+    const progressFill = document.getElementById("checklist-progress-fill");
+    const progressText = document.getElementById("checklist-progress-text");
     if (progressFill && progressText) {
         progressFill.style.width = `${percent}%`;
         progressText.textContent = `${percent}%`;
@@ -2089,6 +2141,14 @@ window.addEventListener("DOMContentLoaded", () => {
     resetWaterFormDate();
     checkAuth();
     lucide.createIcons();
+    
+    const mobileSidebarToggle = document.getElementById("mobileSidebarToggle");
+    if (mobileSidebarToggle) {
+        mobileSidebarToggle.addEventListener("click", () => {
+            const sidebar = document.querySelector(".sidebar");
+            if (sidebar) sidebar.classList.toggle("open");
+        });
+    }
     
     if (supabaseClient) {
         syncFromSupabase();

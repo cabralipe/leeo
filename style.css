@@ -1369,7 +1369,8 @@ button, input, select, textarea {
     transition: transform 0.3s cubic-bezier(0.1, 0.8, 0.25, 1), opacity 0.3s ease;
 }
 
-.modal-backdrop.show .scale-in {
+.modal-backdrop.show .scale-in,
+.auth-container .scale-in {
     transform: scale(1);
     opacity: 1;
 }
