@@ -146,12 +146,7 @@ const DEFAULT_MUTIRAO = [
 
 const DEFAULT_EQUIPMENTS = [];
 
-const DEFAULT_WATER_LOGS = [
-    { id: "w-1", date: "2026-06-05T08:30", user: "Téc. Lucas Santos", type: "Deionizada", action: "Produzido", amount: 50.0, notes: "Recarga das colunas de resina mista" },
-    { id: "w-2", date: "2026-06-05T09:15", user: "Dra. Mariana Silva", type: "Deionizada", action: "Consumido", amount: 10.0, notes: "Preparação de fase móvel para HPLC" },
-    { id: "w-3", date: "2026-06-05T10:00", user: "Téc. Lucas Santos", type: "Destilada", action: "Produzido", amount: 30.0, notes: "Rotina matinal de destilação" },
-    { id: "w-4", date: "2026-06-05T11:45", user: "Téc. Lucas Santos", type: "Destilada", action: "Consumido", amount: 5.0, notes: "Limpeza das vidrarias no ultrassom" }
-];
+const DEFAULT_WATER_LOGS = [];
 
 const DEFAULT_RESERVATIONS = [
     { id: "res-1", lab: "Laboratório de HPLC", user: "Dra. Mariana Silva", start: "2026-06-08T09:00", end: "2026-06-08T12:00", notes: "Corrida de cafeína no HPLC" },
@@ -181,7 +176,9 @@ let state = {
     equipments: JSON.parse(safeLocalStorage.getItem("leeo_equipments")) || DEFAULT_EQUIPMENTS,
     waterLogs: JSON.parse(safeLocalStorage.getItem("leeo_waterLogs")) || DEFAULT_WATER_LOGS,
     inventoryLogs: JSON.parse(safeLocalStorage.getItem("leeo_inventoryLogs")) || DEFAULT_INVENTORY_LOGS,
-    weeklyResponsible: safeLocalStorage.getItem("leeo_weeklyResponsible") || null
+    weeklyResponsible: safeLocalStorage.getItem("leeo_weeklyResponsible") || null,
+    startingDeionizada: parseFloat(safeLocalStorage.getItem("leeo_start_deionizada")) || 100,
+    startingDestilada: parseFloat(safeLocalStorage.getItem("leeo_start_destilada")) || 100
 };
 
 if (!state.weeklyResponsible && state.users.length > 0) {
@@ -273,9 +270,13 @@ async function syncFromSupabase() {
         if (!err5 && dbLogs) state.inventoryLogs = dbLogs;
         
         // 7. Fetch settings
-        const { data: dbSet, error: err6 } = await supabaseClient.from("leeo_settings").select("*").eq("key", "weekly_responsible").single();
-        if (!err6 && dbSet) {
-            state.weeklyResponsible = dbSet.value;
+        const { data: dbSets, error: err6 } = await supabaseClient.from("leeo_settings").select("*");
+        if (!err6 && dbSets) {
+            dbSets.forEach(set => {
+                if (set.key === "weekly_responsible") state.weeklyResponsible = set.value;
+                if (set.key === "start_deionizada") state.startingDeionizada = parseFloat(set.value) || 100;
+                if (set.key === "start_destilada") state.startingDestilada = parseFloat(set.value) || 100;
+            });
         }
         
         saveStateLocal();
@@ -315,6 +316,8 @@ function saveStateLocal() {
     safeLocalStorage.setItem("leeo_waterLogs", JSON.stringify(state.waterLogs));
     safeLocalStorage.setItem("leeo_inventoryLogs", JSON.stringify(state.inventoryLogs));
     safeLocalStorage.setItem("leeo_weeklyResponsible", state.weeklyResponsible);
+    safeLocalStorage.setItem("leeo_start_deionizada", state.startingDeionizada);
+    safeLocalStorage.setItem("leeo_start_destilada", state.startingDestilada);
     
     updateGlobalCounters();
 }
@@ -1826,8 +1829,8 @@ function resetWaterFormDate() {
 }
 
 function calculateWaterStocks() {
-    let deionizada = 0;
-    let destilada = 0;
+    let deionizada = parseFloat(state.startingDeionizada) || 0;
+    let destilada = parseFloat(state.startingDestilada) || 0;
     
     state.waterLogs.forEach(log => {
         const amount = parseFloat(log.amount);
@@ -1850,7 +1853,57 @@ function calculateWaterStocks() {
     if (dsEl) dsEl.textContent = `${displayDest} Litros`;
 }
 
+function setupWaterStartInputs() {
+    const startDeioCtrl = document.getElementById("start-control-deionizada");
+    const startDestCtrl = document.getElementById("start-control-destilada");
+    const inputDeio = document.getElementById("input-start-deionizada");
+    const inputDest = document.getElementById("input-start-destilada");
+    
+    if (!inputDeio || !inputDest || !startDeioCtrl || !startDestCtrl) return;
+    
+    const userRole = state.currentUser ? state.currentUser.role : "user";
+    const isAdmin = userRole === "admin" || userRole === "superadmin";
+    
+    if (isAdmin) {
+        startDeioCtrl.style.display = "flex";
+        startDestCtrl.style.display = "flex";
+        
+        inputDeio.value = state.startingDeionizada;
+        inputDest.value = state.startingDestilada;
+        
+        inputDeio.onchange = () => {
+            const val = parseFloat(inputDeio.value);
+            if (!isNaN(val) && val >= 0) {
+                state.startingDeionizada = val;
+                saveState();
+                calculateWaterStocks();
+                if (supabaseClient) {
+                    supabaseUpsert("leeo_settings", { key: "start_deionizada", value: String(val) });
+                }
+                showToast("Estoque inicial de água deionizada atualizado!", "success");
+            }
+        };
+        
+        inputDest.onchange = () => {
+            const val = parseFloat(inputDest.value);
+            if (!isNaN(val) && val >= 0) {
+                state.startingDestilada = val;
+                saveState();
+                calculateWaterStocks();
+                if (supabaseClient) {
+                    supabaseUpsert("leeo_settings", { key: "start_destilada", value: String(val) });
+                }
+                showToast("Estoque inicial de água destilada atualizado!", "success");
+            }
+        };
+    } else {
+        startDeioCtrl.style.display = "none";
+        startDestCtrl.style.display = "none";
+    }
+}
+
 function renderWaterLogs() {
+    setupWaterStartInputs();
     calculateWaterStocks();
     if (!waterHistoryTbody) return;
     waterHistoryTbody.innerHTML = "";

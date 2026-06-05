@@ -560,9 +560,13 @@
                             <div class="water-stat-icon">
                                 <i data-lucide="droplet"></i>
                             </div>
-                            <div class="water-stat-data">
+                            <div class="water-stat-data" style="flex: 1;">
                                 <span class="water-stat-label">Estoque Estimado de Água Deionizada</span>
                                 <h2 class="water-stat-val" id="stock-deionizada">0 L</h2>
+                                <div class="water-start-stock-control" id="start-control-deionizada" style="display: none; margin-top: 0.5rem; font-size: 0.8rem; align-items: center; gap: 0.5rem; color: var(--text-muted);">
+                                    <span>Estoque Inicial (L):</span>
+                                    <input type="number" id="input-start-deionizada" min="0" step="1" style="width: 70px; height: 26px; min-height: unset; padding: 0.2rem 0.4rem; font-size: 0.8rem; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 4px; color: #fff;">
+                                </div>
                             </div>
                         </div>
                         
@@ -570,9 +574,13 @@
                             <div class="water-stat-icon">
                                 <i data-lucide="droplets"></i>
                             </div>
-                            <div class="water-stat-data">
+                            <div class="water-stat-data" style="flex: 1;">
                                 <span class="water-stat-label">Estoque Estimado de Água Destilada</span>
                                 <h2 class="water-stat-val" id="stock-destilada">0 L</h2>
+                                <div class="water-start-stock-control" id="start-control-destilada" style="display: none; margin-top: 0.5rem; font-size: 0.8rem; align-items: center; gap: 0.5rem; color: var(--text-muted);">
+                                    <span>Estoque Inicial (L):</span>
+                                    <input type="number" id="input-start-destilada" min="0" step="1" style="width: 70px; height: 26px; min-height: unset; padding: 0.2rem 0.4rem; font-size: 0.8rem; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 4px; color: #fff;">
+                                </div>
                             </div>
                         </div>
                     </div>
