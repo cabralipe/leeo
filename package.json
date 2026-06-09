@@ -1,0 +1,11 @@
+{
+  "name": "leeo-lab-management",
+  "version": "1.0.0",
+  "description": "LEEO - Sistema de Gestão de Laboratório",
+  "main": "app.js",
+  "scripts": {
+    "dev": "npx http-server -p 3000"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}
