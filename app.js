@@ -1,3 +1,49 @@
+// compatibility shim for legacy Lucide calls
+window.lucide = { createIcons: () => {} };
+
+// Map legacy Lucide icon names to Phosphor Icon names
+const getPhosphorIcon = (iconName) => {
+    const mapping = {
+        'flask-conical': 'flask',
+        'clipboard-list': 'clipboard',
+        'calendar-days': 'calendar',
+        'calendar-range': 'calendar-dots',
+        'droplet': 'drop',
+        'droplets': 'drops',
+        'log-out': 'sign-out',
+        'menu': 'list',
+        'alert-triangle': 'warning',
+        'help-circle': 'question',
+        'search': 'magnifying-glass',
+        'filter': 'funnel',
+        'alert-circle': 'warning-circle',
+        'trash-2': 'trash',
+        'history': 'clock-counter-clockwise',
+        'user-check': 'user-focus',
+        'rotate-ccw': 'arrow-counter-clockwise',
+        'pipette': 'eyedropper',
+        'zap': 'lightning',
+        'thermometer-snowflake': 'thermometer-cold',
+        'container': 'cube',
+        'check-circle-2': 'check-circle',
+        'shield-alert': 'shield-warning',
+        'edit-3': 'pencil',
+        'book-open': 'book-open',
+        'play-circle': 'play-circle',
+        'check-square': 'check-square',
+        'video': 'video-camera',
+        'plus-circle': 'plus-circle',
+        'user-plus': 'user-plus',
+        'map-pin': 'map-pin',
+        'plus': 'plus',
+        'check': 'check',
+        'x': 'x',
+        'calendar-x': 'calendar-x',
+        'check-circle': 'check-circle'
+    };
+    return mapping[iconName] || iconName;
+};
+
 /**
  * LEEO - Laboratory Management System
  * Core SPA JavaScript Logic with User Authentication & Supabase Sync
@@ -376,28 +422,39 @@ toggleToLogin.addEventListener("click", () => {
     document.getElementById("auth-subtitle-text").textContent = "Gestão e Organização de Laboratório";
 });
 
-loginForm.addEventListener("submit", (e) => {
+loginForm.addEventListener("submit", async (e) => {
     e.preventDefault();
     const usernameInput = document.getElementById("login-username").value.trim().toLowerCase();
     const passwordInput = document.getElementById("login-password").value;
     
-    const user = state.users.find(u => u.username === usernameInput && u.password === passwordInput);
+    const submitBtn = loginForm.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="ph-bold ph-spinner animate-spin" style="width:16px;height:16px;display:inline-block;vertical-align:middle;margin-right:8px;"></i> Verificando...';
+    
+    // Primeiro tenta local
+    let user = state.users.find(u => u.username === usernameInput && u.password === passwordInput);
+    
+    // Se não encontrou e tem supabase, tenta sincronizar e buscar novamente
+    if (!user && supabaseClient) {
+        await syncFromSupabase();
+        user = state.users.find(u => u.username === usernameInput && u.password === passwordInput);
+    }
+    
+    submitBtn.disabled = false;
+    submitBtn.innerHTML = originalText;
     
     if (user) {
         state.currentUser = user;
         saveState();
         showToast(`Bem-vindo, ${user.name}!`, "success");
         checkAuth();
-        
-        if (supabaseClient) {
-            syncFromSupabase();
-        }
     } else {
         showToast("Usuário ou senha incorretos.", "danger");
     }
 });
 
-registerForm.addEventListener("submit", (e) => {
+registerForm.addEventListener("submit", async (e) => {
     e.preventDefault();
     const name = document.getElementById("reg-fullname").value.trim();
     const username = document.getElementById("reg-username").value.trim().toLowerCase();
@@ -417,17 +474,25 @@ registerForm.addEventListener("submit", (e) => {
         role
     };
     
+    const submitBtn = registerForm.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="ph-bold ph-spinner animate-spin" style="width:16px;height:16px;display:inline-block;vertical-align:middle;margin-right:8px;"></i> Criando conta...';
+    
     state.users.push(newUser);
     state.currentUser = newUser;
     saveState();
     
+    if (supabaseClient) {
+        await supabaseUpsert("leeo_users", newUser);
+        await syncFromSupabase();
+    }
+    
+    submitBtn.disabled = false;
+    submitBtn.innerHTML = originalText;
+    
     showToast("Conta criada e login efetuado com sucesso!", "success");
     registerForm.reset();
-    
-    if (supabaseClient) {
-        supabaseUpsert("leeo_users", newUser);
-        syncFromSupabase();
-    }
     checkAuth();
 });
 
@@ -538,19 +603,18 @@ function showToast(message, type = "info") {
     const toast = document.createElement("div");
     toast.className = `toast toast-${type}`;
     
-    let iconName = "info";
-    if (type === "success") iconName = "check-circle";
-    if (type === "warning") iconName = "alert-triangle";
-    if (type === "danger") iconName = "x-circle";
+    let iconClass = "ph-info";
+    if (type === "success") iconClass = "ph-check-circle";
+    if (type === "warning") iconClass = "ph-warning";
+    if (type === "danger") iconClass = "ph-x-circle";
     
     toast.innerHTML = `
-        <i data-lucide="${iconName}"></i>
+        <i class="ph-bold ${iconClass}"></i>
         <div class="toast-message">${message}</div>
-        <button class="toast-close"><i data-lucide="x"></i></button>
+        <button class="toast-close"><i class="ph-bold ph-x"></i></button>
     `;
     
     container.appendChild(toast);
-    lucide.createIcons({ attrs: { class: 'lucide-icon' } });
     
     const autoRemove = setTimeout(() => {
         toast.style.opacity = "0";
@@ -628,7 +692,7 @@ function renderInventoryLogs() {
         
         li.innerHTML = `
             <span>${log.text}</span>
-            <span class="activity-log-time">${log.time}</span>
+            <span class="activity-log-time tabular-nums">${log.time}</span>
         `;
         logListEl.appendChild(li);
     });
@@ -652,14 +716,12 @@ function updateGlobalCounters() {
     const unlBadge = document.getElementById("stat-unlabeled-count");
     
     if (expBadge && unlBadge) {
-        expBadge.innerHTML = `<i data-lucide="alert-triangle"></i><span>${expiredCount} Vencido(s)</span>`;
-        unlBadge.innerHTML = `<i data-lucide="help-circle"></i><span>${unlabeledCount} Sem Rótulo</span>`;
+        expBadge.innerHTML = `<i class="ph-bold ph-warning"></i><span>${expiredCount} Vencido(s)</span>`;
+        unlBadge.innerHTML = `<i class="ph-bold ph-question"></i><span>${unlabeledCount} Sem Rótulo</span>`;
         
         expBadge.style.display = expiredCount > 0 ? "flex" : "none";
         unlBadge.style.display = unlabeledCount > 0 ? "flex" : "none";
     }
-    
-    lucide.createIcons();
 }
 
 function setTopbarDate() {
@@ -904,18 +966,18 @@ function renderReagentsTable() {
         let alertBadgesHTML = "";
         if (expStatus.expired) {
             tr.className = "row-expired";
-            alertBadgesHTML += `<span class="badge badge-danger" title="${expStatus.text}"><i data-lucide="alert-triangle"></i> Vencido</span> `;
+            alertBadgesHTML += `<span class="badge badge-danger" title="${expStatus.text}"><i class="ph-bold ph-warning"></i> Vencido</span> `;
         } else if (expStatus.label === "Próximo Venc.") {
-            alertBadgesHTML += `<span class="badge badge-warning" title="${expStatus.text}"><i data-lucide="clock"></i> Próx. Venc.</span> `;
+            alertBadgesHTML += `<span class="badge badge-warning" title="${expStatus.text}"><i class="ph-bold ph-clock"></i> Próx. Venc.</span> `;
         }
         
         if (reagent.unlabeled) {
             tr.className = expStatus.expired ? "row-expired" : "row-unlabeled";
-            alertBadgesHTML += `<span class="badge badge-warning" title="Sem rótulo visível ou danificado"><i data-lucide="help-circle"></i> Sem Rótulo</span>`;
+            alertBadgesHTML += `<span class="badge badge-warning" title="Sem rótulo visível ou danificado"><i class="ph-bold ph-question"></i> Sem Rótulo</span>`;
         }
         
         if (alertBadgesHTML === "") {
-            alertBadgesHTML = `<span class="badge badge-success"><i data-lucide="check"></i> Regular</span>`;
+            alertBadgesHTML = `<span class="badge badge-success"><i class="ph-bold ph-check"></i> Regular</span>`;
         }
         
         let formattedExpiry = "N/D";
@@ -930,10 +992,10 @@ function renderReagentsTable() {
                 <td class="actions-col">
                     <div class="table-actions">
                         <button class="btn-action edit" onclick="editReagent('${reagent.id}')" title="Editar Reagente">
-                            <i data-lucide="edit-3"></i>
+                            <i class="ph-bold ph-pencil"></i>
                         </button>
                         <button class="btn-action delete" onclick="deleteReagent('${reagent.id}')" title="Apagar Reagente">
-                            <i data-lucide="trash-2"></i>
+                            <i class="ph-bold ph-trash"></i>
                         </button>
                     </div>
                 </td>
@@ -941,19 +1003,17 @@ function renderReagentsTable() {
         }
         
         tr.innerHTML = `
-            <td class="font-bold" style="color: var(--primary);">${reagent.code}</td>
+            <td class="font-bold tabular-nums" style="color: var(--primary);">${reagent.code}</td>
             <td class="font-bold">${reagent.name}</td>
             <td><code>${reagent.cas}</code></td>
-            <td>${reagent.quantity}</td>
-            <td><span class="badge badge-neutral"><i data-lucide="map-pin"></i> ${reagent.location}</span></td>
-            <td>${formattedExpiry}</td>
+            <td class="tabular-nums">${reagent.quantity}</td>
+            <td><span class="badge badge-neutral"><i class="ph-bold ph-map-pin"></i> ${reagent.location}</span></td>
+            <td class="tabular-nums">${formattedExpiry}</td>
             <td>${alertBadgesHTML}</td>
             ${actionsTD}
         `;
         reagentsTbody.appendChild(tr);
     });
-    
-    lucide.createIcons();
 }
 
 // ==========================================================================
@@ -1102,7 +1162,7 @@ function renderMutiraoGrid() {
         divCard.innerHTML = `
             <div class="mutirao-card-header">
                 <h3 class="mutirao-day-title">${dayData.day}</h3>
-                ${isCompleted ? '<span class="badge badge-success"><i data-lucide="check-circle"></i> Concluído</span>' : `<span class="badge badge-neutral">${dayProgressPercent}%</span>`}
+                ${isCompleted ? '<span class="badge badge-success"><i class="ph-bold ph-check-circle"></i> Concluído</span>' : `<span class="badge badge-neutral">${dayProgressPercent}%</span>`}
             </div>
             
             <div class="mutirao-assign-row">
@@ -1125,7 +1185,7 @@ function renderMutiraoGrid() {
             
             <div class="mutirao-progress-container">
                 <div class="progress-track">
-                    <div class="progress-fill" style="width: ${dayProgressPercent}%; background: ${isCompleted ? 'var(--success)' : 'var(--primary)'};"></div>
+                    <div class="progress-fill ${isCompleted ? 'completed' : ''}" style="width: ${dayProgressPercent}%;"></div>
                 </div>
             </div>
         `;
@@ -1166,8 +1226,6 @@ function renderMutiraoGrid() {
             }
         });
     });
-    
-    lucide.createIcons();
 }
 
 window.updateMutiraoResponsible = function(dayIndex, value) {
@@ -1395,16 +1453,16 @@ function renderReservations() {
         if (canCancel) {
             deleteActionHTML = `
                 <button class="btn-action delete" onclick="deleteReservation('${res.id}')" title="Cancelar Agendamento">
-                    <i data-lucide="calendar-x"></i>
+                    <i class="ph-bold ph-calendar-x"></i>
                 </button>
             `;
         }
         
         tr.innerHTML = `
             <td class="font-bold">${res.lab}</td>
-            <td><span class="badge badge-neutral"><i data-lucide="user"></i> ${res.user}</span></td>
-            <td><code>${formattedStart}</code></td>
-            <td><code>${formattedEnd}</code></td>
+            <td><span class="badge badge-neutral"><i class="ph-bold ph-user"></i> ${res.user}</span></td>
+            <td class="tabular-nums"><code>${formattedStart}</code></td>
+            <td class="tabular-nums"><code>${formattedEnd}</code></td>
             <td style="font-size: 0.8rem; color: var(--text-muted); max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${res.notes || ''}">
                 ${res.notes || '-'}
             </td>
@@ -1417,8 +1475,6 @@ function renderReservations() {
         
         reservationsTbody.appendChild(tr);
     });
-    
-    lucide.createIcons();
 }
 
 // ==========================================================================
@@ -1458,9 +1514,9 @@ function renderEquipmentsGrid() {
         const isMaintenance = equip.status === "Em Manutenção";
         div.className = `card equipment-card ${isMaintenance ? 'maintenance-mode' : ''}`;
         
-        let statusBadge = `<span class="badge badge-success"><i data-lucide="check-circle-2"></i> Operacional</span>`;
+        let statusBadge = `<span class="badge badge-success"><i class="ph-bold ph-check-circle"></i> Operacional</span>`;
         if (isMaintenance) {
-            statusBadge = `<span class="badge badge-danger"><i data-lucide="alert-triangle"></i> Em Manutenção</span>`;
+            statusBadge = `<span class="badge badge-danger"><i class="ph-bold ph-warning"></i> Em Manutenção</span>`;
         }
         
         let toggleSwitchHTML = "";
@@ -1481,11 +1537,11 @@ function renderEquipmentsGrid() {
             adminCardActionsHTML = `
                 <div class="equip-admin-actions" style="display: flex; gap: 0.5rem; margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid var(--border-color);">
                     <button class="btn btn-outline btn-icon" onclick="editEquipment('${equip.id}')" style="flex: 1; font-size: 0.75rem; padding: 0.4rem 0.6rem; min-height: unset; height: unset;">
-                        <i data-lucide="edit-3" style="width: 14px; height: 14px;"></i>
+                        <i class="ph-bold ph-pencil" style="width: 14px; height: 14px;"></i>
                         <span>Editar</span>
                     </button>
                     <button class="btn btn-outline btn-icon" onclick="deleteEquipment('${equip.id}')" style="flex: 1; font-size: 0.75rem; padding: 0.4rem 0.6rem; min-height: unset; height: unset; color: var(--danger); border-color: hsla(346, 84%, 55%, 0.3);">
-                        <i data-lucide="trash-2" style="width: 14px; height: 14px; color: var(--danger);"></i>
+                        <i class="ph-bold ph-trash" style="width: 14px; height: 14px; color: var(--danger);"></i>
                         <span>Apagar</span>
                     </button>
                 </div>
@@ -1495,7 +1551,7 @@ function renderEquipmentsGrid() {
         div.innerHTML = `
             <div class="equip-card-top">
                 <div class="equip-icon-box">
-                    <i data-lucide="${equip.icon || 'cpu'}"></i>
+                    <i class="ph-bold ph-${getPhosphorIcon(equip.icon || 'cpu')}"></i>
                 </div>
                 ${statusBadge}
             </div>
@@ -1504,17 +1560,17 @@ function renderEquipmentsGrid() {
             
             <div class="equip-details-area">
                 <div class="equip-detail-row">
-                    <i data-lucide="user"></i>
+                    <i class="ph-bold ph-user"></i>
                     <span>Técnico: <strong>${equip.responsible || 'Sem responsável'}</strong></span>
                 </div>
                 <div class="equip-detail-row">
-                    <i data-lucide="shield-alert"></i>
+                    <i class="ph-bold ph-shield-warning"></i>
                     <span>Status: <strong>${equip.status}</strong></span>
                 </div>
             </div>
             
             <button class="btn btn-outline btn-block btn-icon" onclick="openTrainingModal('${equip.id}')">
-                <i data-lucide="book-open"></i>
+                <i class="ph-bold ph-book-open"></i>
                 <span>Procedimentos e Treino</span>
             </button>
             
@@ -1524,8 +1580,6 @@ function renderEquipmentsGrid() {
         
         equipmentGridContainer.appendChild(div);
     });
-    
-    lucide.createIcons();
 }
 
 window.toggleEquipStatus = function(id, isChecked) {
@@ -1578,9 +1632,9 @@ window.openTrainingModal = function(id) {
     let videoLinkHTML = "";
     if (equip.procedures && equip.procedures.video) {
         videoLinkHTML = `
-            <h4><i data-lucide="video"></i> Link de Vídeo de Treino</h4>
+            <h4><i class="ph-bold ph-video-camera"></i> Link de Vídeo de Treino</h4>
             <a href="${equip.procedures.video}" target="_blank" class="video-link-card">
-                <i data-lucide="play-circle"></i>
+                <i class="ph-bold ph-play-circle"></i>
                 <div>
                     <div>Assistir: ${equip.procedures.videoTitle || 'Vídeo de Treinamento'}</div>
                     <span style="font-size: 0.75rem; color: var(--text-muted);">Link demonstrativo das melhores práticas de operação científica</span>
@@ -1591,7 +1645,7 @@ window.openTrainingModal = function(id) {
     
     trainingBody.innerHTML = `
         <div class="training-content">
-            <h4><i data-lucide="check-square"></i> Requisitos de Treino Obrigatório</h4>
+            <h4><i class="ph-bold ph-check-square"></i> Requisitos de Treino Obrigatório</h4>
             <p>Para operar o(a) <strong>${equip.name}</strong> de forma autónoma no laboratório LEEO, o usuário deve compreender os seguintes procedimentos operacionais:</p>
             
             <ul>
@@ -1599,7 +1653,7 @@ window.openTrainingModal = function(id) {
             </ul>
             
             <div class="alert-banner warning-banner" style="margin-top: 1.5rem; margin-bottom: 1.5rem;">
-                <div class="banner-icon"><i data-lucide="alert-circle"></i></div>
+                <div class="banner-icon"><i class="ph-bold ph-warning-circle"></i></div>
                 <div class="banner-content">
                     <h4 class="banner-title" style="margin-top: 0;">Nota de Segurança</h4>
                     <p style="font-size: 0.8rem;">Em caso de dúvidas ou irregularidades de funcionamento, desligue o equipamento e chame imediatamente o Responsável Técnico: <strong>${equip.responsible || 'Sem responsável'}</strong>.</p>
@@ -1611,7 +1665,6 @@ window.openTrainingModal = function(id) {
     `;
     
     trainingModal.classList.add("show");
-    lucide.createIcons();
 };
 
 // Training Modal Close Actions
@@ -1926,20 +1979,20 @@ function renderWaterLogs() {
         
         let opBadge = "";
         if (log.action === "Produzido") {
-            opBadge = `<span class="badge badge-success"><i data-lucide="plus"></i> Produzido</span>`;
+            opBadge = `<span class="badge badge-success"><i class="ph-bold ph-plus"></i> Produzido</span>`;
         } else {
-            opBadge = `<span class="badge badge-danger"><i data-lucide="minus"></i> Consumido</span>`;
+            opBadge = `<span class="badge badge-danger"><i class="ph-bold ph-minus"></i> Consumido</span>`;
         }
         
         const dateObj = new Date(log.date);
         const formattedDate = dateObj.toLocaleDateString("pt-BR") + " " + dateObj.toLocaleTimeString("pt-BR", { hour: '2-digit', minute: '2-digit' });
         
         tr.innerHTML = `
-            <td><strong>${formattedDate}</strong></td>
+            <td class="tabular-nums"><strong>${formattedDate}</strong></td>
             <td>${log.user}</td>
             <td><span class="badge badge-neutral">${log.type}</span></td>
             <td>${opBadge}</td>
-            <td class="font-bold">${log.amount.toFixed(1)} L</td>
+            <td class="font-bold tabular-nums">${log.amount.toFixed(1)} L</td>
             <td style="font-size: 0.8rem; color: var(--text-muted); max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${log.notes || ''}">
                 ${log.notes || '-'}
             </td>
@@ -1947,8 +2000,6 @@ function renderWaterLogs() {
         
         waterHistoryTbody.appendChild(tr);
     });
-    
-    lucide.createIcons();
 }
 
 if (waterLogForm) {
@@ -2154,11 +2205,11 @@ function renderUsersTable() {
         
         let roleBadge = "";
         if (user.role === "superadmin") {
-            roleBadge = `<span class="badge badge-danger"><i data-lucide="shield-check"></i> Superadmin</span>`;
+            roleBadge = `<span class="badge badge-danger"><i class="ph-bold ph-shield-check"></i> Superadmin</span>`;
         } else if (user.role === "admin") {
-            roleBadge = `<span class="badge badge-warning"><i data-lucide="shield"></i> Administrador</span>`;
+            roleBadge = `<span class="badge badge-warning"><i class="ph-bold ph-shield"></i> Administrador</span>`;
         } else {
-            roleBadge = `<span class="badge badge-neutral"><i data-lucide="user"></i> Usuário</span>`;
+            roleBadge = `<span class="badge badge-neutral"><i class="ph-bold ph-user"></i> Usuário</span>`;
         }
         
         tr.innerHTML = `
@@ -2168,18 +2219,16 @@ function renderUsersTable() {
             <td class="actions-col">
                 <div class="table-actions">
                     <button class="btn-action edit" onclick="editUser('${user.id}')" title="Editar Usuário">
-                        <i data-lucide="edit-3"></i>
+                        <i class="ph-bold ph-pencil"></i>
                     </button>
                     <button class="btn-action delete" onclick="deleteUser('${user.id}')" title="Apagar Usuário">
-                        <i data-lucide="trash-2"></i>
+                        <i class="ph-bold ph-trash"></i>
                     </button>
                 </div>
             </td>
         `;
         usersTbody.appendChild(tr);
     });
-    
-    lucide.createIcons();
 }
 
 // ==========================================================================
@@ -2233,7 +2282,6 @@ window.addEventListener("DOMContentLoaded", () => {
     setTopbarDate();
     resetWaterFormDate();
     checkAuth();
-    lucide.createIcons();
     
     const mobileSidebarToggle = document.getElementById("mobileSidebarToggle");
     if (mobileSidebarToggle) {
