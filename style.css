@@ -1490,6 +1490,7 @@ button, input, select, textarea {
     overflow-y: auto;
     display: flex;
     flex-direction: column;
+}
 
 .modal-content.medium-modal {
     max-width: 720px;
