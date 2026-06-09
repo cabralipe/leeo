@@ -7,20 +7,28 @@
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <!-- Lucide Icons -->
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400&display=swap" rel="stylesheet">
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
     <!-- Supabase JS Client CDN -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <!-- Ambient background effects -->
+    <div class="ambient-glows">
+        <div class="glow-1"></div>
+        <div class="glow-2"></div>
+        <div class="glow-3"></div>
+    </div>
+    <div class="grid-overlay"></div>
+
     <!-- AUTHENTICATION SCREEN overlay -->
     <div class="auth-container" id="auth-screen">
         <div class="auth-card scale-in">
             <div class="auth-header">
                 <div class="auth-logo">
-                    <i data-lucide="flask-conical"></i>
+                    <i class="ph-bold ph-flask"></i>
                 </div>
                 <h2 class="auth-title">LEEO</h2>
                 <p class="auth-subtitle" id="auth-subtitle-text">Gestão e Organização de Laboratório</p>
@@ -68,7 +76,7 @@
             <div class="sidebar-header">
                 <div class="logo-area">
                     <div class="logo-icon">
-                        <i data-lucide="flask-conical"></i>
+                        <i class="ph-bold ph-flask"></i>
                     </div>
                     <span class="logo-text">LEEO</span>
                 </div>
@@ -79,43 +87,43 @@
                 <ul>
                     <li>
                         <button class="nav-btn active" data-tab="inventario">
-                            <i data-lucide="package"></i>
+                            <i class="ph-bold ph-package"></i>
                             <span>Inventário</span>
                         </button>
                     </li>
                     <li>
                         <button class="nav-btn" data-tab="organizacao">
-                            <i data-lucide="clipboard-list"></i>
+                            <i class="ph-bold ph-clipboard"></i>
                             <span>Checklist Semanal</span>
                         </button>
                     </li>
                     <li>
                         <button class="nav-btn" data-tab="mutirao">
-                            <i data-lucide="calendar-days"></i>
+                            <i class="ph-bold ph-calendar"></i>
                             <span>Mutirão Geral</span>
                         </button>
                     </li>
                     <li>
                         <button class="nav-btn" data-tab="agendamento">
-                            <i data-lucide="calendar-range"></i>
+                            <i class="ph-bold ph-calendar-dots"></i>
                             <span>Agendamento</span>
                         </button>
                     </li>
                     <li>
                         <button class="nav-btn" data-tab="equipamentos">
-                            <i data-lucide="cpu"></i>
+                            <i class="ph-bold ph-cpu"></i>
                             <span>Equipamentos</span>
                         </button>
                     </li>
                     <li>
                         <button class="nav-btn" data-tab="agua">
-                            <i data-lucide="droplet"></i>
+                            <i class="ph-bold ph-drop"></i>
                             <span>Registros de Água</span>
                         </button>
                     </li>
                     <li id="nav-users-li" style="display: none;">
                         <button class="nav-btn" data-tab="usuarios">
-                            <i data-lucide="users"></i>
+                            <i class="ph-bold ph-users"></i>
                             <span>Usuários</span>
                         </button>
                     </li>
@@ -125,14 +133,14 @@
             <div class="sidebar-footer">
                 <div class="user-profile">
                     <div class="user-avatar">
-                        <i data-lucide="user"></i>
+                        <i class="ph-bold ph-user"></i>
                     </div>
                     <div class="user-info">
                         <div class="user-name" id="sidebar-user-name">Carregando...</div>
                         <div class="user-role" id="sidebar-user-role">Nível</div>
                     </div>
                     <button class="btn-logout" id="btn-logout" title="Sair do Sistema">
-                        <i data-lucide="log-out"></i>
+                        <i class="ph-bold ph-sign-out"></i>
                     </button>
                 </div>
             </div>
@@ -144,19 +152,19 @@
             <header class="topbar">
                 <div class="topbar-title-area">
                     <button class="mobile-toggle" id="mobileSidebarToggle">
-                        <i data-lucide="menu"></i>
+                        <i class="ph-bold ph-list"></i>
                     </button>
                     <h1 id="page-title">Inventário de Reagentes</h1>
                 </div>
                 
                 <div class="topbar-actions">
                     <div class="quick-stats">
-                        <div class="quick-stat-item alert" id="stat-expired-count">
-                            <i data-lucide="alert-triangle"></i>
+                        <div class="quick-stat-item alert tabular-nums" id="stat-expired-count">
+                            <i class="ph-bold ph-warning"></i>
                             <span>0 Vencidos</span>
                         </div>
-                        <div class="quick-stat-item warning" id="stat-unlabeled-count">
-                            <i data-lucide="help-circle"></i>
+                        <div class="quick-stat-item warning tabular-nums" id="stat-unlabeled-count">
+                            <i class="ph-bold ph-question"></i>
                             <span>0 Sem Rótulo</span>
                         </div>
                     </div>
@@ -172,11 +180,11 @@
                     <div class="view-header">
                         <div class="search-filter-bar">
                             <div class="search-input-wrapper">
-                                <i data-lucide="search"></i>
+                                <i class="ph-bold ph-magnifying-glass"></i>
                                 <input type="text" id="reagent-search" placeholder="Buscar por nome, código ou CAS...">
                             </div>
                             <div class="filter-dropdown-wrapper">
-                                <i data-lucide="filter"></i>
+                                <i class="ph-bold ph-funnel"></i>
                                 <select id="reagent-filter-location">
                                     <option value="todos">Todas as Localizações</option>
                                     <option value="Geladeira 1">Geladeira 1</option>
@@ -187,7 +195,7 @@
                                 </select>
                             </div>
                             <div class="filter-dropdown-wrapper">
-                                <i data-lucide="alert-circle"></i>
+                                <i class="ph-bold ph-warning-circle"></i>
                                 <select id="reagent-filter-status">
                                     <option value="todos">Todos os Status</option>
                                     <option value="regular">Normais</option>
@@ -199,11 +207,11 @@
                         
                         <div class="action-buttons" id="inventory-admin-actions" style="display: none;">
                             <button class="btn btn-danger btn-icon" id="btn-discard-expired">
-                                <i data-lucide="trash-2"></i>
+                                <i class="ph-bold ph-trash"></i>
                                 <span>Descartar Vencidos</span>
                             </button>
                             <button class="btn btn-primary btn-icon" id="btn-add-reagent-modal">
-                                <i data-lucide="plus"></i>
+                                <i class="ph-bold ph-plus"></i>
                                 <span>Novo Reagente</span>
                             </button>
                         </div>
@@ -239,7 +247,7 @@
                     <div class="card log-card mt-4">
                         <div class="card-header">
                             <div class="card-title-area">
-                                <i data-lucide="history"></i>
+                                <i class="ph-bold ph-clock-counter-clockwise"></i>
                                 <h3>Histórico de Descartes e Alterações</h3>
                             </div>
                             <button class="btn-clear-logs" id="btn-clear-inventory-logs" style="display: none;">Limpar Histórico</button>
@@ -257,7 +265,7 @@
                     <!-- Top Business Rule Banner -->
                     <div class="alert-banner warning-banner">
                         <div class="banner-icon">
-                            <i data-lucide="info"></i>
+                            <i class="ph-bold ph-info"></i>
                         </div>
                         <div class="banner-content">
                             <h4 class="banner-title">Aviso de Responsabilidade</h4>
@@ -271,7 +279,7 @@
                             <div class="responsible-select-container">
                                 <span class="label">Responsável Técnico da Semana</span>
                                 <div class="responsible-select-wrapper">
-                                    <i data-lucide="user-check"></i>
+                                    <i class="ph-bold ph-user-focus"></i>
                                     <select id="select-weekly-responsible" class="responsible-dropdown">
                                         <!-- Populated dynamically via app.js -->
                                     </select>
@@ -283,12 +291,12 @@
                                     <div class="progress-track">
                                         <div class="progress-fill" id="checklist-progress-fill" style="width: 0%;"></div>
                                     </div>
-                                    <span class="progress-percent" id="checklist-progress-text">0%</span>
+                                    <span class="progress-percent tabular-nums" id="checklist-progress-text">0%</span>
                                 </div>
                             </div>
                         </div>
                         <button class="btn btn-outline btn-icon" id="btn-reset-checklist" style="display: none;">
-                            <i data-lucide="rotate-ccw"></i>
+                            <i class="ph-bold ph-arrow-counter-clockwise"></i>
                             <span>Reiniciar Checklist</span>
                         </button>
                     </div>
@@ -300,7 +308,7 @@
                         <div class="card checklist-card">
                             <div class="checklist-card-header">
                                 <div class="category-icon color-bancadas">
-                                    <i data-lucide="table"></i>
+                                    <i class="ph-bold ph-table"></i>
                                 </div>
                                 <h3>Bancadas e Capelas</h3>
                             </div>
@@ -327,7 +335,7 @@
                         <div class="card checklist-card">
                             <div class="checklist-card-header">
                                 <div class="category-icon color-ponteiras">
-                                    <i data-lucide="pipette"></i>
+                                    <i class="ph-bold ph-eyedropper"></i>
                                 </div>
                                 <h3>Ponteiras</h3>
                             </div>
@@ -354,7 +362,7 @@
                         <div class="card checklist-card">
                             <div class="checklist-card-header">
                                 <div class="category-icon color-residuos">
-                                    <i data-lucide="trash"></i>
+                                    <i class="ph-bold ph-trash"></i>
                                 </div>
                                 <h3>Resíduos</h3>
                             </div>
@@ -381,7 +389,7 @@
                         <div class="card checklist-card">
                             <div class="checklist-card-header">
                                 <div class="category-icon color-equipamentos">
-                                    <i data-lucide="power"></i>
+                                    <i class="ph-bold ph-power"></i>
                                 </div>
                                 <h3>Equipamentos & Ar-condicionados</h3>
                             </div>
@@ -408,7 +416,7 @@
                         <div class="card checklist-card">
                             <div class="checklist-card-header">
                                 <div class="category-icon color-epi">
-                                    <i data-lucide="shield"></i>
+                                    <i class="ph-bold ph-shield"></i>
                                 </div>
                                 <h3>EPI & Insumos</h3>
                             </div>
@@ -438,7 +446,7 @@
                 <section id="view-mutirao" class="tab-view">
                     <div class="alert-banner warning-banner">
                         <div class="banner-icon">
-                            <i data-lucide="calendar"></i>
+                            <i class="ph-bold ph-calendar"></i>
                         </div>
                         <div class="banner-content">
                             <h4 class="banner-title">Mutirão de Organização Geral</h4>
@@ -456,7 +464,7 @@
                     <!-- Business Rule Info Banner -->
                     <div class="alert-banner warning-banner" style="border-left: 4px solid var(--warning);">
                         <div class="banner-icon">
-                            <i data-lucide="clock"></i>
+                            <i class="ph-bold ph-clock"></i>
                         </div>
                         <div class="banner-content">
                             <h4 class="banner-title">Regra de Reserva Antecipada</h4>
@@ -468,7 +476,7 @@
                         <!-- Left Side: Reservation Form -->
                         <div class="card water-form-card">
                             <div class="card-header">
-                                <h3><i data-lucide="plus-circle"></i> Solicitar Reserva</h3>
+                                <h3><i class="ph-bold ph-plus-circle"></i> Solicitar Reserva</h3>
                             </div>
                             <form id="reservation-form" class="vertical-form">
                                 <div class="form-group">
@@ -505,7 +513,7 @@
                         <!-- Right Side: Active Reservations List -->
                         <div class="card water-history-card">
                             <div class="card-header">
-                                <h3><i data-lucide="calendar"></i> Reservas Cadastradas</h3>
+                                <h3><i class="ph-bold ph-calendar"></i> Reservas Cadastradas</h3>
                                 <button class="btn-clear-logs" id="btn-clear-reservations" style="display: none;">Limpar Tudo</button>
                             </div>
                             <div class="table-responsive select-y">
@@ -541,7 +549,7 @@
                             Ao mudar o estado para "Em Manutenção", um alerta é exibido no cartão.
                         </div>
                         <button class="btn btn-primary btn-icon" id="btn-add-equipment-modal" style="display: none;">
-                            <i data-lucide="plus"></i>
+                            <i class="ph-bold ph-plus"></i>
                             <span>Novo Equipamento</span>
                         </button>
                     </div>
@@ -558,28 +566,28 @@
                     <div class="water-stats-grid">
                         <div class="card water-stat-card deionizada">
                             <div class="water-stat-icon">
-                                <i data-lucide="droplet"></i>
+                                <i class="ph-bold ph-drop"></i>
                             </div>
                             <div class="water-stat-data" style="flex: 1;">
                                 <span class="water-stat-label">Estoque Estimado de Água Deionizada</span>
-                                <h2 class="water-stat-val" id="stock-deionizada">0 L</h2>
+                                <h2 class="water-stat-val tabular-nums" id="stock-deionizada">0 L</h2>
                                 <div class="water-start-stock-control" id="start-control-deionizada" style="display: none; margin-top: 0.5rem; font-size: 0.8rem; align-items: center; gap: 0.5rem; color: var(--text-muted);">
                                     <span>Estoque Inicial (L):</span>
-                                    <input type="number" id="input-start-deionizada" min="0" step="1" style="width: 70px; height: 26px; min-height: unset; padding: 0.2rem 0.4rem; font-size: 0.8rem; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 4px; color: #fff;">
+                                    <input type="number" id="input-start-deionizada" min="0" step="1" style="width: 70px; height: 26px; min-height: unset; padding: 0.2rem 0.4rem; font-size: 0.8rem; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 4px; color: var(--text-primary);">
                                 </div>
                             </div>
                         </div>
                         
                         <div class="card water-stat-card destilada">
                             <div class="water-stat-icon">
-                                <i data-lucide="droplets"></i>
+                                <i class="ph-bold ph-drops"></i>
                             </div>
                             <div class="water-stat-data" style="flex: 1;">
                                 <span class="water-stat-label">Estoque Estimado de Água Destilada</span>
-                                <h2 class="water-stat-val" id="stock-destilada">0 L</h2>
+                                <h2 class="water-stat-val tabular-nums" id="stock-destilada">0 L</h2>
                                 <div class="water-start-stock-control" id="start-control-destilada" style="display: none; margin-top: 0.5rem; font-size: 0.8rem; align-items: center; gap: 0.5rem; color: var(--text-muted);">
                                     <span>Estoque Inicial (L):</span>
-                                    <input type="number" id="input-start-destilada" min="0" step="1" style="width: 70px; height: 26px; min-height: unset; padding: 0.2rem 0.4rem; font-size: 0.8rem; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 4px; color: #fff;">
+                                    <input type="number" id="input-start-destilada" min="0" step="1" style="width: 70px; height: 26px; min-height: unset; padding: 0.2rem 0.4rem; font-size: 0.8rem; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 4px; color: var(--text-primary);">
                                 </div>
                             </div>
                         </div>
@@ -589,7 +597,7 @@
                         <!-- Left Side: Registration Form -->
                         <div class="card water-form-card">
                             <div class="card-header">
-                                <h3><i data-lucide="plus-circle"></i> Novo Registro de Volume</h3>
+                                <h3><i class="ph-bold ph-plus-circle"></i> Novo Registro de Volume</h3>
                             </div>
                             <form id="water-log-form" class="vertical-form">
                                 <div class="form-row split">
@@ -637,7 +645,7 @@
                         <!-- Right Side: Recent History -->
                         <div class="card water-history-card">
                             <div class="card-header">
-                                <h3><i data-lucide="list"></i> Histórico de Registros</h3>
+                                <h3><i class="ph-bold ph-list"></i> Histórico de Registros</h3>
                                 <button class="btn-clear-logs" id="btn-clear-water-logs" style="display: none;">Limpar Registros</button>
                             </div>
                             <div class="table-responsive select-y">
@@ -668,7 +676,7 @@
                             <h3 style="font-family: var(--font-heading); font-size: 1.25rem;">Gerenciamento de Acesso</h3>
                         </div>
                         <button class="btn btn-primary btn-icon" id="btn-add-user-modal">
-                            <i data-lucide="user-plus"></i>
+                            <i class="ph-bold ph-user-plus"></i>
                             <span>Cadastrar Usuário</span>
                         </button>
                     </div>
@@ -703,7 +711,7 @@
             <div class="modal-header">
                 <h3 id="reagent-modal-title">Novo Reagente</h3>
                 <button class="modal-close" id="btn-close-reagent-modal">
-                    <i data-lucide="x"></i>
+                    <i class="ph-bold ph-x"></i>
                 </button>
             </div>
             <form id="reagent-form" class="vertical-form">
@@ -770,7 +778,7 @@
             <div class="modal-header">
                 <h3 id="training-modal-title">Centrífuga - Treinamento e Procedimentos</h3>
                 <button class="modal-close" id="btn-close-training-modal">
-                    <i data-lucide="x"></i>
+                    <i class="ph-bold ph-x"></i>
                 </button>
             </div>
             <div class="modal-body" id="training-modal-body">
@@ -788,7 +796,7 @@
             <div class="modal-header">
                 <h3 id="user-modal-title">Cadastrar Novo Usuário</h3>
                 <button class="modal-close" id="btn-close-user-modal">
-                    <i data-lucide="x"></i>
+                    <i class="ph-bold ph-x"></i>
                 </button>
             </div>
             <form id="user-form" class="vertical-form">
@@ -833,7 +841,7 @@
             <div class="modal-header">
                 <h3 id="equipment-modal-title">Novo Equipamento</h3>
                 <button class="modal-close" id="btn-close-equipment-modal">
-                    <i data-lucide="x"></i>
+                    <i class="ph-bold ph-x"></i>
                 </button>
             </div>
             <form id="equipment-form" class="vertical-form">
@@ -892,7 +900,7 @@
 
                 <div class="form-group">
                     <label for="equipment-steps">Instruções e Procedimentos de Treino (um por linha) *</label>
-                    <textarea id="equipment-steps" rows="6" placeholder="Insira os passos obrigatórios de treino, um por linha.&#10;Exemplo:&#10;1. Pese todos os tubos em balança de precisão.&#10;2. Certifique-se de que estão tampados..." required style="width:100%; min-height:120px; padding:0.6rem 0.85rem; background-color:var(--bg-primary); border:1px solid var(--border-color); border-radius:var(--radius-md); color:#fff; font-family:inherit; box-sizing:border-box; outline:none; transition:var(--transition-fast);"></textarea>
+                    <textarea id="equipment-steps" rows="6" placeholder="Insira os passos obrigatórios de treino, um por linha.&#10;Exemplo:&#10;1. Pese todos os tubos em balança de precisão.&#10;2. Certifique-se de que estão tampados..." required style="width:100%; min-height:120px; font-family:inherit;"></textarea>
                 </div>
 
                 <div class="modal-footer">
